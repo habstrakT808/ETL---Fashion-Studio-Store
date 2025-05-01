@@ -9,4 +9,4 @@ coverage run -m pytest tests
 coverage report
 
 # Url Google Sheets:
-https://docs.google.com/spreadsheets/d/1I9UWwygyOLWJXmSf-YEyoi8a0s4xQ38tw8oDle5R_WU/edit
+https://docs.google.com/spreadsheets/d/1lCVP18qRlIB1k8ljX4PuJbdvEL3I8cBEPhduRXFM-jo/edit
