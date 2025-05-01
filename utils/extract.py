@@ -52,69 +52,81 @@ def scrape_page(page_number):
             
             soup = BeautifulSoup(response.text, 'html.parser')
             
-            # Selector baru untuk produk
-            product_items = soup.select('.collection-card')
+            # Selector untuk produk-produk di halaman
+            product_cards = soup.select('.collection-card')
             
             # Debug info
-            print(f"Jumlah produk ditemukan: {len(product_items)}")
+            logger.info(f"Jumlah produk ditemukan: {len(product_cards)}")
             
             # Timestamp sebagai penanda waktu scraping
             current_timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             
-            for item in product_items:
+            for card in product_cards:
                 try:
-                    # Ekstrak data sesuai ketentuan
+                    # Inisialisasi dictionary untuk menyimpan data produk
                     product = {}
                     
-                    # Ekstrak detail produk dari dalam collection-card
-                    details = item.select_one('.product-details')
-                    
                     # Ekstrak judul produk
-                    title_element = item.select_one('.collection-title') or details.select_one('h3') if details else None
-                    product['Title'] = title_element.text.strip() if title_element else "Unknown Product"
+                    product_details = card.select_one('.product-details')
+                    title_element = card.select_one('.product-title') or (product_details.select_one('h3') if product_details else None)
+                    
+                    if title_element:
+                        product['Title'] = title_element.text.strip()
+                    else:
+                        # Jika tidak menemukan dengan selector di atas, coba selector lain
+                        title_element = card.select_one('h3')
+                        if title_element:
+                            product['Title'] = title_element.text.strip()
+                        else:
+                            product['Title'] = "Unknown Product"
                     
                     # Ekstrak harga produk
-                    price_element = item.select_one('.collection-price') or details.select_one('.price') if details else None
+                    price_container = card.select_one('.price-container')
+                    price_element = price_container.select_one('.price') if price_container else None
+                    
+                    if not price_element:
+                        price_element = card.select_one('.price') or card.select_one('span.price')
+                    
                     if price_element:
                         price_text = price_element.text.strip()
                         product['Price'] = price_text
                     else:
                         product['Price'] = "Price Unavailable"
                     
-                    # Ekstrak rating produk
-                    rating_element = item.select_one('.collection-rating') or details.select_one('.rating') if details else None
-                    if rating_element:
-                        rating_text = rating_element.text.strip()
-                        product['Rating'] = rating_text
-                    else:
-                        product['Rating'] = "Invalid Rating"
+                    # Ekstrak rating, colors, size, dan gender dari paragraf
+                    # Berdasarkan screenshot, data ini ada di elemen <p> dengan style inline
+                    paragraphs = card.select('p')
                     
-                    # Ekstrak warna produk
-                    colors_element = item.select_one('.collection-colors') or details.select_one('.colors') if details else None
-                    if colors_element:
-                        colors_text = colors_element.text.strip()
-                        product['Colors'] = colors_text
-                    else:
-                        product['Colors'] = "Colors Unavailable"
+                    # Default values
+                    product['Rating'] = "Invalid Rating"
+                    product['Colors'] = "Colors Unavailable"
+                    product['Size'] = "Size Unavailable"
+                    product['Gender'] = "Gender Unavailable"
                     
-                    # Ekstrak ukuran produk
-                    size_element = item.select_one('.collection-size') or details.select_one('.size') if details else None
-                    if size_element:
-                        size_text = size_element.text.strip()
-                        product['Size'] = size_text
-                    else:
-                        product['Size'] = "Size Unavailable"
-                    
-                    # Ekstrak gender produk
-                    gender_element = item.select_one('.collection-gender') or details.select_one('.gender') if details else None
-                    if gender_element:
-                        gender_text = gender_element.text.strip()
-                        product['Gender'] = gender_text
-                    else:
-                        product['Gender'] = "Gender Unavailable"
+                    for p in paragraphs:
+                        text = p.text.strip()
+                        
+                        # Ekstrak rating
+                        if "Rating:" in text or ("/" in text and "★" in text):
+                            product['Rating'] = text
+                        
+                        # Ekstrak colors
+                        elif "Colors" in text:
+                            product['Colors'] = text
+                        
+                        # Ekstrak size
+                        elif text.startswith("Size:") or "Size" in text:
+                            product['Size'] = text
+                        
+                        # Ekstrak gender
+                        elif text.startswith("Gender:") or "Gender" in text or "Men" in text or "Women" in text or "Unisex" in text:
+                            product['Gender'] = text
                     
                     # Tambahkan timestamp
                     product['timestamp'] = current_timestamp
+                    
+                    # Debug: cetak produk yang diekstrak
+                    logger.info(f"Produk diekstrak: {product}")
                     
                     products.append(product)
                     
@@ -123,7 +135,10 @@ def scrape_page(page_number):
                     continue
                 
             logger.info(f"Berhasil mengambil {len(products)} produk dari halaman {page_number}")
-            return products
+            
+            # Jika berhasil mendapatkan data, keluar dari loop retry
+            if products:
+                return products
             
         except requests.exceptions.RequestException as e:
             if attempt < MAX_RETRIES - 1:
@@ -160,7 +175,10 @@ def extract_data(start_page=1, end_page=50):
         for page in range(start_page, end_page + 1):
             try:
                 page_products = scrape_page(page)
-                all_products.extend(page_products)
+                if page_products:
+                    all_products.extend(page_products)
+                else:
+                    logger.warning(f"Tidak ada produk yang diekstrak dari halaman {page}")
                 
                 # Delay kecil untuk menghindari rate limiting
                 time.sleep(0.5)
@@ -170,11 +188,11 @@ def extract_data(start_page=1, end_page=50):
                 continue
         
         # Konversi ke DataFrame
-        df = pd.DataFrame(all_products)
-        logger.info(f"Total data yang berhasil diekstrak: {len(df)}")
-        
-        # Debug: Cetak sampel data
-        if not df.empty:
+        if all_products:
+            df = pd.DataFrame(all_products)
+            logger.info(f"Total data yang berhasil diekstrak: {len(df)}")
+            
+            # Debug: Cetak sampel data
             logger.info(f"Sampel data yang diekstrak:\n{df.head().to_string()}")
             
             # Cetak nilai unik untuk setiap kolom
@@ -184,10 +202,14 @@ def extract_data(start_page=1, end_page=50):
                     logger.info(f"Nilai unik untuk kolom {col}: {unique_values}")
                 else:
                     logger.info(f"Jumlah nilai unik untuk kolom {col}: {len(unique_values)}")
-        
-        return df
+            
+            return df
+        else:
+            logger.warning("Tidak ada produk yang berhasil diekstrak")
+            # Buat DataFrame kosong dengan kolom yang diperlukan
+            return pd.DataFrame(columns=['Title', 'Price', 'Rating', 'Colors', 'Size', 'Gender', 'timestamp'])
         
     except Exception as e:
         logger.error(f"Terjadi kesalahan pada proses ekstraksi: {str(e)}")
         # Mengembalikan DataFrame kosong daripada gagal sepenuhnya
-        return pd.DataFrame()
+        return pd.DataFrame(columns=['Title', 'Price', 'Rating', 'Colors', 'Size', 'Gender', 'timestamp'])
