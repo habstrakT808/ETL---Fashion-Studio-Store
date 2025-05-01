@@ -5,6 +5,7 @@ Module untuk melakukan transformasi data dari hasil ekstraksi.
 import logging
 import pandas as pd
 import re
+import numpy as np
 
 # Konfigurasi logging
 logger = logging.getLogger(__name__)
@@ -17,7 +18,7 @@ def clean_price(price_value):
     Membersihkan data harga dan mengkonversi dari USD ke IDR.
     """
     if pd.isna(price_value) or price_value == "Price Unavailable":
-        return None
+        return 0.0  # Ubah return None menjadi return 0.0
     
     try:
         # Ekstrak nilai numerik menggunakan regex
@@ -45,88 +46,126 @@ def clean_rating(rating_value):
     Membersihkan data rating.
     
     Args:
-        rating_value (str): Nilai rating dalam format string
+        rating_value: Nilai rating (bisa berupa string atau float)
         
     Returns:
         float: Nilai rating dalam format float
     """
+    # Jika rating sudah berupa float, kembalikan langsung
+    if isinstance(rating_value, (float, int)) and not pd.isna(rating_value):
+        return float(rating_value)
+    
     if pd.isna(rating_value) or rating_value == "Invalid Rating":
-        return None
+        return 0.0
     
     try:
-        # Ekstrak nilai numerik menggunakan regex
-        match = re.search(r'(\d+(\.\d+)?)', str(rating_value))
-        if match:
-            return float(match.group(1))
-        return None
+        # Jika rating berupa string, coba ekstrak nilai numeriknya
+        if isinstance(rating_value, str):
+            # Format: "Rating: ★ 3.3 / 5"
+            if "Rating:" in rating_value and "/" in rating_value:
+                # Ekstrak angka sebelum "/"
+                parts = rating_value.split("/")
+                if len(parts) > 0:
+                    # Ekstrak angka dari bagian sebelum "/"
+                    match = re.search(r'(\d+\.\d+|\d+)', parts[0])
+                    if match:
+                        return float(match.group(1))
+            
+            # Coba ekstrak nilai numerik menggunakan regex umum
+            match = re.search(r'(\d+\.\d+|\d+)', rating_value)
+            if match:
+                return float(match.group(1))
+        return 0.0
     except Exception as e:
         logger.warning(f"Gagal memproses rating '{rating_value}': {str(e)}")
-        return None
+        return 0.0
 
 def clean_colors(colors_value):
     """
     Membersihkan data jumlah warna.
     
     Args:
-        colors_value (str): Nilai jumlah warna dalam format string
+        colors_value: Nilai jumlah warna (bisa berupa string atau int)
         
     Returns:
         int: Jumlah warna dalam format integer
     """
+    # Jika colors sudah berupa int, kembalikan langsung
+    if isinstance(colors_value, int) and not pd.isna(colors_value):
+        return colors_value
+    
     if pd.isna(colors_value) or colors_value == "Colors Unavailable":
-        return None
+        return 1
     
     try:
-        # Ekstrak nilai numerik menggunakan regex
-        match = re.search(r'(\d+)', str(colors_value))
-        if match:
-            return int(match.group(1))
-        return None
+        # Jika colors berupa string, coba ekstrak nilai numeriknya
+        if isinstance(colors_value, str):
+            # Format: "3 Colors"
+            match = re.search(r'(\d+)', colors_value)
+            if match:
+                return int(match.group(1))
+        return 1
     except Exception as e:
         logger.warning(f"Gagal memproses jumlah warna '{colors_value}': {str(e)}")
-        return None
+        return 1
 
 def clean_size(size_value):
     """
     Membersihkan data ukuran.
     
     Args:
-        size_value (str): Nilai ukuran dalam format string
+        size_value: Nilai ukuran
         
     Returns:
         str: Ukuran yang sudah dibersihkan
     """
     if pd.isna(size_value) or size_value == "Size Unavailable":
-        return None
+        return "M"
     
     try:
-        # Hapus teks "Size: " jika ada
-        size_cleaned = re.sub(r'^Size:\s*', '', str(size_value))
-        return size_cleaned.strip()
+        # Format: "Size: XL"
+        if isinstance(size_value, str):
+            if "Size:" in size_value:
+                return size_value.replace("Size:", "").strip()
+            elif "Size" in size_value:
+                return size_value.replace("Size", "").strip()
+            return size_value.strip()
+        return "M"
     except Exception as e:
         logger.warning(f"Gagal memproses ukuran '{size_value}': {str(e)}")
-        return None
+        return "M"
 
 def clean_gender(gender_value):
     """
     Membersihkan data gender.
     
     Args:
-        gender_value (str): Nilai gender dalam format string
+        gender_value: Nilai gender
         
     Returns:
         str: Gender yang sudah dibersihkan
     """
     if pd.isna(gender_value) or gender_value == "Gender Unavailable":
-        return None
+        return "Unisex"
     
     try:
-        # Hapus teks "Gender: " jika ada
-        gender_cleaned = re.sub(r'^Gender:\s*', '', str(gender_value))
-        return gender_cleaned.strip()
+        # Format: "Gender: Men"
+        if isinstance(gender_value, str):
+            if "Gender:" in gender_value:
+                return gender_value.replace("Gender:", "").strip()
+            elif "Gender" in gender_value:
+                return gender_value.replace("Gender", "").strip()
+            elif "Men" in gender_value and "Women" not in gender_value:
+                return "Men"
+            elif "Women" in gender_value:
+                return "Women"
+            elif "Unisex" in gender_value:
+                return "Unisex"
+            return gender_value.strip()
+        return "Unisex"
     except Exception as e:
         logger.warning(f"Gagal memproses gender '{gender_value}': {str(e)}")
-        return None
+        return "Unisex"
 
 def transform_data(df):
     """
@@ -150,7 +189,7 @@ def transform_data(df):
         # Debugging: Cetak jumlah data setelah setiap langkah
         logger.info(f"Jumlah data setelah membersihkan Title: {len(transformed_df)}")
         
-        # Transformasi kolom Price (Lebih toleran)
+        # Transformasi kolom Price
         logger.info("Membersihkan dan mengkonversi kolom Price...")
         transformed_df['Price'] = transformed_df['Price'].apply(clean_price)
         # Jangan hapus data dengan Price null, ganti dengan nilai default
@@ -158,7 +197,7 @@ def transform_data(df):
         
         logger.info(f"Jumlah data setelah membersihkan Price: {len(transformed_df)}")
         
-        # Transformasi kolom Rating (Lebih toleran)
+        # Transformasi kolom Rating
         logger.info("Membersihkan kolom Rating...")
         transformed_df['Rating'] = transformed_df['Rating'].apply(clean_rating)
         # Jangan hapus data dengan Rating null, ganti dengan nilai default
@@ -166,7 +205,7 @@ def transform_data(df):
         
         logger.info(f"Jumlah data setelah membersihkan Rating: {len(transformed_df)}")
         
-        # Transformasi kolom Colors (Lebih toleran)
+        # Transformasi kolom Colors
         logger.info("Membersihkan kolom Colors...")
         transformed_df['Colors'] = transformed_df['Colors'].apply(clean_colors)
         # Jangan hapus data dengan Colors null, ganti dengan nilai default
@@ -174,7 +213,7 @@ def transform_data(df):
         
         logger.info(f"Jumlah data setelah membersihkan Colors: {len(transformed_df)}")
         
-        # Transformasi kolom Size (Lebih toleran)
+        # Transformasi kolom Size
         logger.info("Membersihkan kolom Size...")
         transformed_df['Size'] = transformed_df['Size'].apply(clean_size)
         # Jangan hapus data dengan Size null, ganti dengan nilai default
@@ -182,7 +221,7 @@ def transform_data(df):
         
         logger.info(f"Jumlah data setelah membersihkan Size: {len(transformed_df)}")
         
-        # Transformasi kolom Gender (Lebih toleran)
+        # Transformasi kolom Gender
         logger.info("Membersihkan kolom Gender...")
         transformed_df['Gender'] = transformed_df['Gender'].apply(clean_gender)
         # Jangan hapus data dengan Gender null, ganti dengan nilai default
@@ -196,10 +235,6 @@ def transform_data(df):
         transformed_df = transformed_df[transformed_df['Title'] != "Unknown Product"]
         
         logger.info(f"Jumlah data setelah menghapus data invalid: {len(transformed_df)}")
-        
-        # KOMENTAR BARIS INI UNTUK MENGHINDARI PENGHAPUSAN DATA NULL
-        # logger.info("Menghapus data dengan nilai null...")
-        # transformed_df = transformed_df.dropna()
         
         # Menghapus data duplikat
         logger.info("Menghapus data duplikat...")
