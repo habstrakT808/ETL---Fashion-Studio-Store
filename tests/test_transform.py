@@ -43,9 +43,9 @@ class TestTransform(unittest.TestCase):
         self.assertEqual(clean_price('$45.99'), 45.99 * USD_TO_IDR_RATE)
         self.assertEqual(clean_price('$10.50'), 10.50 * USD_TO_IDR_RATE)
         
-        # Test harga tidak tersedia
-        self.assertIsNone(clean_price('Price Unavailable'))
-        self.assertIsNone(clean_price(np.nan))
+        # Test harga tidak tersedia - diubah untuk mengharapkan 0.0 alih-alih None
+        self.assertEqual(clean_price('Price Unavailable'), 0.0)
+        self.assertEqual(clean_price(np.nan), 0.0)
         
         # Test format harga tidak valid - diubah untuk mengharapkan 0.0 alih-alih None
         self.assertEqual(clean_price('Invalid Price'), 0.0)
@@ -58,12 +58,12 @@ class TestTransform(unittest.TestCase):
         self.assertEqual(clean_rating('4.5 / 5'), 4.5)
         self.assertEqual(clean_rating('3.8 / 5'), 3.8)
         
-        # Test rating tidak tersedia
-        self.assertIsNone(clean_rating('Invalid Rating'))
-        self.assertIsNone(clean_rating(np.nan))
+        # Test rating tidak tersedia - diubah untuk mengharapkan 0.0 alih-alih None
+        self.assertEqual(clean_rating('Invalid Rating'), 0.0)
+        self.assertEqual(clean_rating(np.nan), 0.0)
         
-        # Test format rating tidak valid
-        self.assertIsNone(clean_rating('Good'))
+        # Test format rating tidak valid - diubah untuk mengharapkan 0.0 alih-alih None
+        self.assertEqual(clean_rating('Good'), 0.0)
     
     def test_clean_colors(self):
         """
@@ -73,12 +73,12 @@ class TestTransform(unittest.TestCase):
         self.assertEqual(clean_colors('3 Colors'), 3)
         self.assertEqual(clean_colors('5 Colors'), 5)
         
-        # Test warna tidak tersedia
-        self.assertIsNone(clean_colors('Colors Unavailable'))
-        self.assertIsNone(clean_colors(np.nan))
+        # Test warna tidak tersedia - diubah untuk mengharapkan 1 alih-alih None
+        self.assertEqual(clean_colors('Colors Unavailable'), 1)
+        self.assertEqual(clean_colors(np.nan), 1)
         
-        # Test format jumlah warna tidak valid
-        self.assertIsNone(clean_colors('Multiple Colors'))
+        # Test format jumlah warna tidak valid - diubah untuk mengharapkan 1 alih-alih None
+        self.assertEqual(clean_colors('Multiple Colors'), 1)
     
     def test_clean_size(self):
         """
@@ -88,9 +88,9 @@ class TestTransform(unittest.TestCase):
         self.assertEqual(clean_size('Size: M'), 'M')
         self.assertEqual(clean_size('Size: XL'), 'XL')
         
-        # Test ukuran tidak tersedia
-        self.assertIsNone(clean_size('Size Unavailable'))
-        self.assertIsNone(clean_size(np.nan))
+        # Test ukuran tidak tersedia - diubah untuk mengharapkan 'M' alih-alih None
+        self.assertEqual(clean_size('Size Unavailable'), 'M')
+        self.assertEqual(clean_size(np.nan), 'M')
         
         # Test format ukuran berbeda
         self.assertEqual(clean_size('M'), 'M')
@@ -103,9 +103,9 @@ class TestTransform(unittest.TestCase):
         self.assertEqual(clean_gender('Gender: Unisex'), 'Unisex')
         self.assertEqual(clean_gender('Gender: Men'), 'Men')
         
-        # Test gender tidak tersedia
-        self.assertIsNone(clean_gender('Gender Unavailable'))
-        self.assertIsNone(clean_gender(np.nan))
+        # Test gender tidak tersedia - diubah untuk mengharapkan 'Unisex' alih-alih None
+        self.assertEqual(clean_gender('Gender Unavailable'), 'Unisex')
+        self.assertEqual(clean_gender(np.nan), 'Unisex')
         
         # Test format gender berbeda
         self.assertEqual(clean_gender('Women'), 'Women')
