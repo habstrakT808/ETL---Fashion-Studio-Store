@@ -148,12 +148,12 @@ ETL-Fashion-Studio/
 
 ### CSV Output
 
-![image](https://github.com/user-attachments/assets/f8bd1007-a88c-452d-99f5-f08a7cf7173c)
+![image](https://github.com/user-attachments/assets/a6678ff3-1d3a-496b-8f64-a6e1de1442b7)
 
 ### Google Sheets
 
 Akses Google Sheets yang dibuat melalui URL:
-[https://docs.google.com/spreadsheets/d/1I9UWwygyOLWJXmSf-YEyoi8a0s4xQ38tw8oDle5R_WU/edit](https://docs.google.com/spreadsheets/d/1I9UWwygyOLWJXmSf-YEyoi8a0s4xQ38tw8oDle5R_WU/edit)
+[https://docs.google.com/spreadsheets/d/1lCVP18qRlIB1k8ljX4PuJbdvEL3I8cBEPhduRXFM-jo/edit](https://docs.google.com/spreadsheets/d/1lCVP18qRlIB1k8ljX4PuJbdvEL3I8cBEPhduRXFM-jo/edit)
 
 ## 🤝 Kontribusi
 
