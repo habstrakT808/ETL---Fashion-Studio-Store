@@ -1,0 +1,6 @@
+"# Kredensial dan file sensitif" 
+"google-sheets-api.json" 
+"__pycache__/" 
+"*.py[cod]" 
+".pytest_cache/" 
+".coverage" 
