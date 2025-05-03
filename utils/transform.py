@@ -13,12 +13,13 @@ logger = logging.getLogger(__name__)
 # Nilai tukar Dollar ke Rupiah
 USD_TO_IDR_RATE = 16000
 
+# Modify the clean_price function to properly handle all cases
 def clean_price(price_value):
     """
     Membersihkan data harga dan mengkonversi dari USD ke IDR.
     """
     if pd.isna(price_value) or price_value == "Price Unavailable":
-        return 0.0  # Ubah return None menjadi return 0.0
+        return 0.0  # Kembalikan 0.0 alih-alih None untuk nilai tidak valid
     
     try:
         # Ekstrak nilai numerik menggunakan regex
@@ -39,7 +40,7 @@ def clean_price(price_value):
         return 0.0  # Default jika tidak ada nilai numerik
     except Exception as e:
         logger.warning(f"Gagal memproses harga '{price_value}': {str(e)}")
-        return 0.0  # Return nilai default daripada None
+        return 0.0  # Return nilai default 0.0 alih-alih None
 
 def clean_rating(rating_value):
     """
@@ -56,7 +57,7 @@ def clean_rating(rating_value):
         return float(rating_value)
     
     if pd.isna(rating_value) or rating_value == "Invalid Rating":
-        return 0.0
+        return 0.0  # Kembalikan 0.0 alih-alih None
     
     try:
         # Jika rating berupa string, coba ekstrak nilai numeriknya
@@ -75,10 +76,10 @@ def clean_rating(rating_value):
             match = re.search(r'(\d+\.\d+|\d+)', rating_value)
             if match:
                 return float(match.group(1))
-        return 0.0
+        return 0.0  # Kembalikan 0.0 jika tidak dapat mengekstrak nilai
     except Exception as e:
         logger.warning(f"Gagal memproses rating '{rating_value}': {str(e)}")
-        return 0.0
+        return 0.0  # Kembalikan 0.0 alih-alih None
 
 def clean_colors(colors_value):
     """
@@ -186,16 +187,11 @@ def transform_data(df):
         logger.info("Membersihkan kolom Title...")
         transformed_df['Title'] = transformed_df['Title'].str.strip()
         
-        # Debugging: Cetak jumlah data setelah setiap langkah
-        logger.info(f"Jumlah data setelah membersihkan Title: {len(transformed_df)}")
-        
         # Transformasi kolom Price
         logger.info("Membersihkan dan mengkonversi kolom Price...")
         transformed_df['Price'] = transformed_df['Price'].apply(clean_price)
         # Jangan hapus data dengan Price null, ganti dengan nilai default
         transformed_df['Price'] = transformed_df['Price'].fillna(0)
-        
-        logger.info(f"Jumlah data setelah membersihkan Price: {len(transformed_df)}")
         
         # Transformasi kolom Rating
         logger.info("Membersihkan kolom Rating...")
@@ -203,15 +199,11 @@ def transform_data(df):
         # Jangan hapus data dengan Rating null, ganti dengan nilai default
         transformed_df['Rating'] = transformed_df['Rating'].fillna(0)
         
-        logger.info(f"Jumlah data setelah membersihkan Rating: {len(transformed_df)}")
-        
         # Transformasi kolom Colors
         logger.info("Membersihkan kolom Colors...")
         transformed_df['Colors'] = transformed_df['Colors'].apply(clean_colors)
         # Jangan hapus data dengan Colors null, ganti dengan nilai default
         transformed_df['Colors'] = transformed_df['Colors'].fillna(1)
-        
-        logger.info(f"Jumlah data setelah membersihkan Colors: {len(transformed_df)}")
         
         # Transformasi kolom Size
         logger.info("Membersihkan kolom Size...")
@@ -219,22 +211,21 @@ def transform_data(df):
         # Jangan hapus data dengan Size null, ganti dengan nilai default
         transformed_df['Size'] = transformed_df['Size'].fillna("M")
         
-        logger.info(f"Jumlah data setelah membersihkan Size: {len(transformed_df)}")
-        
         # Transformasi kolom Gender
         logger.info("Membersihkan kolom Gender...")
         transformed_df['Gender'] = transformed_df['Gender'].apply(clean_gender)
         # Jangan hapus data dengan Gender null, ganti dengan nilai default
         transformed_df['Gender'] = transformed_df['Gender'].fillna("Unisex")
         
-        logger.info(f"Jumlah data setelah membersihkan Gender: {len(transformed_df)}")
-        
         # Menghapus data invalid (Lebih selektif)
         logger.info("Menghapus data invalid...")
         # Hanya hapus data dengan Title "Unknown Product"
         transformed_df = transformed_df[transformed_df['Title'] != "Unknown Product"]
         
-        logger.info(f"Jumlah data setelah menghapus data invalid: {len(transformed_df)}")
+        # TAMBAHAN: Filter data dengan Price=0 atau Rating=0
+        logger.info("Menghapus data dengan Price=0 atau Rating=0...")
+        transformed_df = transformed_df[(transformed_df['Price'] > 0) & (transformed_df['Rating'] > 0)]
+        logger.info(f"Jumlah data setelah menghapus Price=0 atau Rating=0: {len(transformed_df)}")
         
         # Menghapus data duplikat
         logger.info("Menghapus data duplikat...")
