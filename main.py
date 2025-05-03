@@ -29,15 +29,12 @@ def main():
 
         # Transformasi data
         logger.info("Memulai proses transformasi data...")
+        # In the main function:
         transformed_data = transform_data(raw_data)
-        logger.info(f"Transformasi selesai. {len(transformed_data)} data berhasil ditransformasi.")
-        
-        # Jika tidak ada data setelah transformasi, gunakan data sampel
-        if transformed_data.empty:
-            logger.warning("Tidak ada data setelah transformasi. Menggunakan data sampel...")
+        if transformed_data.empty or len(transformed_data) < 10:  # If too few records remain
+            logger.warning("Insufficient valid data after transformation. Using sample data...")
             from utils.transform import generate_sample_data
             transformed_data = generate_sample_data(100)
-            logger.info(f"Data sampel dibuat dengan {len(transformed_data)} entri.")
 
         # Load data ke berbagai repositori
         # 1. Simpan ke CSV
